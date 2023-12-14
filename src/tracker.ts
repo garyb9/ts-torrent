@@ -24,6 +24,8 @@ export function getPeers(
             const announceResp = parseAnnounceResp(response);
             // pass peers to callback
             callback(announceResp.peers);
+        } else {
+            console.log(response);
         }
     });
 }
