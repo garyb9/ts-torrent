@@ -1,4 +1,4 @@
-interface TorrentFile {
+export interface TorrentFile {
     // Define the structure of each file object here, if known.
     // For instance, if each file has 'name' and 'size', use:
     // name: string;
@@ -7,7 +7,7 @@ interface TorrentFile {
     [key: string]: any; // Generic catch-all type if structure is unknown.
 }
 
-interface TorrentInfo {
+export interface TorrentInfo {
     files: TorrentFile[];
     name: string;
     'piece length': number;
@@ -21,4 +21,12 @@ export interface TorrentMetadata {
     'created by': string;
     'creation date': number;
     info: TorrentInfo;
+}
+
+export interface ConnectionResponse {
+    connectionId(connectionId: any): unknown;
+}
+
+export interface AnnounceResponse {
+    peers: any; // Define the structure of peers
 }
