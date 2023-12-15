@@ -7,9 +7,7 @@ import { getPeers } from './tracker';
 async function main() {
     const torrentPath: string = path.join(
         __dirname,
-        '..',
-        'public',
-        '924F1C9B89F7543DBBA5CA0E30A5CF4F2E112360.torrent'
+        '../public/924F1C9B89F7543DBBA5CA0E30A5CF4F2E112360.torrent'
     );
     const torrent = openTorrent(torrentPath);
 

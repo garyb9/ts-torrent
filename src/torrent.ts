@@ -9,7 +9,7 @@ export function openTorrent(torrentPath: string): TorrentMetadata | any {
         const torrent: Buffer = fs.readFileSync(torrentPath);
         const decoded = bencodec.decode(torrent);
         const decodedObject = convertBuffersToStrings(decoded);
-        // console.log(decodedObject);
+        console.log(decodedObject);
         return decodedObject as TorrentMetadata;
     } catch (error) {
         console.error(`Error opening ${torrentPath}:\n${error}`);
