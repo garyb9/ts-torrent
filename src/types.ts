@@ -30,3 +30,7 @@ export interface ConnectionResponse {
 export interface AnnounceResponse {
     peers: any; // Define the structure of peers
 }
+
+export interface Results {
+    [key: string]: string;
+}

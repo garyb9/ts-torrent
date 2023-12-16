@@ -2,64 +2,105 @@ import * as fs from 'fs';
 import * as path from 'path';
 import dgram from 'dgram';
 import { Buffer } from 'buffer';
+import { URL } from 'url';
+import axios from 'axios';
+import { Results } from './types';
 
-interface Results {
-    [key: string]: string;
+// Function to check HTTP/S trackers
+async function checkHttpTracker(trackerUrl: string): Promise<boolean> {
+    const params = new URLSearchParams({
+        info_hash: '<info_hash>', // 20-byte SHA1 hash of the torrent info dictionary
+        peer_id: '<peer_id>', // 20-byte peer ID
+        port: '6881', // Port number the client is listening on
+        uploaded: '0', // Total amount uploaded
+        downloaded: '0', // Total amount downloaded
+        left: '0', // Amount left to download
+        compact: '1', // Compact response format
+    });
+
+    const announceUrl = trackerUrl.endsWith('/announce')
+        ? trackerUrl
+        : `${trackerUrl}/announce`;
+
+    try {
+        const response = await axios.get(announceUrl, { params });
+        console.log(`Tracker response: ${response.data}`);
+        return true;
+    } catch (error) {
+        console.error(`Error contacting tracker: ${error}`);
+        return false;
+    }
 }
 
-export async function testUrls(urls: string[]) {
+// Function to check UDP trackers
+function checkUdpTracker(
+    trackerUrl: string,
+    msgString: string,
+    timeoutDuration: number = 10000,
+    callback: (resp: any) => void
+): void {
+    const url = new URL(trackerUrl);
+    const socket = dgram.createSocket('udp4');
+
+    const announceUrl = trackerUrl.endsWith('/announce')
+        ? trackerUrl
+        : `${trackerUrl}/announce`;
+
+    const messageBuffer = Buffer.from(msgString, 'utf8');
+
+    console.log(`Pinging tracker: ${announceUrl}`);
+
+    socket.send(
+        messageBuffer,
+        0,
+        messageBuffer.length,
+        parseInt(url.port),
+        url.hostname,
+        err => {
+            if (err) {
+                console.error(`Socket send error: ${err}`);
+                socket.close();
+            }
+        }
+    );
+
+    const timeout = setTimeout(() => {
+        console.log(`Reached timeout for ${announceUrl}`);
+        socket.close();
+    }, timeoutDuration);
+
+    socket.on('message', response => {
+        console.log(
+            `Received response from ${announceUrl}: ${response.toString(
+                'utf8'
+            )}`
+        );
+        callback(response);
+        clearTimeout(timeout);
+        socket.close();
+    });
+
+    socket.on('error', err => {
+        console.error(`Received error response from ${announceUrl}: ${err}`);
+        clearTimeout(timeout);
+        socket.close();
+    });
+}
+
+export async function testTrackerUrls(trackerUrls: string[]) {
     const timeoutDuration = 10000; // 10 seconds in milliseconds
     const results: Results = {};
-
-    const socket = dgram.createSocket('udp4');
     const msgString = 'ping';
-    const msg = Buffer.from(msgString, 'utf8');
 
-    for (let announcePath of urls) {
-        await new Promise<void>(resolve => {
-            try {
-                const url = new URL(announcePath);
-
-                console.log(`Pinging tracker: ${announcePath}`);
-
-                socket.send(
-                    msg,
-                    0,
-                    msg.length,
-                    Number(url.port),
-                    url.host,
-                    () => {}
-                );
-
-                const timeout = setTimeout(() => {
-                    console.log(`Timeout for ${announcePath}`);
-                    results[announcePath] = 'Timeout';
-                    socket.close();
-                    resolve();
-                }, timeoutDuration);
-
-                socket.on('message', msg => {
-                    console.log(`Received message from ${announcePath}:`, msg);
-                    results[announcePath] = 'Received response';
-                    clearTimeout(timeout);
-                    socket.close();
-                    resolve();
-                });
-
-                socket.on('error', err => {
-                    console.log(`Error for ${announcePath}:`, err);
-                    results[announcePath] = 'Error';
-                    clearTimeout(timeout);
-                    socket.close();
-                    resolve();
-                });
-            } catch (error) {
-                results[announcePath] = `Socket Error: ${error}`;
-                // clearTimeout(timeout);
-                socket.close();
-                resolve();
-            }
-        });
+    for (let trackerUrl of trackerUrls) {
+        const trackerUrlParsed = new URL(trackerUrl);
+        if (trackerUrlParsed.protocol.includes('udp')) {
+            checkUdpTracker(trackerUrl, msgString, timeoutDuration, resp => {
+                results[trackerUrl] = resp;
+            });
+        } else if (trackerUrlParsed.protocol.includes('http')) {
+            // TODO: add http/s ping
+        }
     }
 
     return results;
@@ -72,5 +113,5 @@ if (require.main === module) {
     const trackersList = JSON.parse(trackersFile);
 
     // run ping script
-    testUrls(trackersList).then(results => console.log(results));
+    testTrackerUrls(trackersList).then(results => console.log(results));
 }
