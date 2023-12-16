@@ -16,3 +16,15 @@ export function convertBuffersToStrings(obj: any): any {
     // Return the value unchanged if it's not a Buffer, Array, or Object
     return obj;
 }
+
+export function generateRandomString(length: number): string {
+    const characters =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += characters.charAt(
+            Math.floor(Math.random() * characters.length)
+        );
+    }
+    return result;
+}

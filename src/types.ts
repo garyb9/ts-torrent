@@ -34,3 +34,10 @@ export interface AnnounceResponse {
 export interface Results {
     [key: string]: string;
 }
+
+// export type Callback = (resp: string | null, err: string | null) => void;
+
+export interface Callback {
+    (resp: string, err: null): void;
+    (resp: null, err: string): void;
+}

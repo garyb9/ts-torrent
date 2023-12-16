@@ -1,16 +1,26 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import axios from 'axios';
 import dgram from 'dgram';
 import { Buffer } from 'buffer';
 import { URL } from 'url';
-import axios from 'axios';
-import { Results } from './types';
+import { Callback, Results } from './types';
+import { generateRandomString } from './utils';
+import { randomBytes } from 'crypto';
+
+const TRACKER_MAGIC_CONSTANT = 0x41727101980;
+const ACTION_CONNECT = 0;
+const TRANSACTION_ID = Math.floor(Math.random() * 0xffffffff);
 
 // Function to check HTTP/S trackers
-async function checkHttpTracker(trackerUrl: string): Promise<boolean> {
+async function checkHttpTracker(
+    trackerUrl: string,
+    timeoutDuration: number = 10000,
+    callback: Callback
+): Promise<void> {
     const params = new URLSearchParams({
-        info_hash: '<info_hash>', // 20-byte SHA1 hash of the torrent info dictionary
-        peer_id: '<peer_id>', // 20-byte peer ID
+        info_hash: randomBytes(20).toString('utf-8'), // 20-byte SHA1 hash of the torrent info dictionary
+        peer_id: `-qB4390-${generateRandomString(12)}`, // 20-byte peer ID
         port: '6881', // Port number the client is listening on
         uploaded: '0', // Total amount uploaded
         downloaded: '0', // Total amount downloaded
@@ -22,22 +32,36 @@ async function checkHttpTracker(trackerUrl: string): Promise<boolean> {
         ? trackerUrl
         : `${trackerUrl}/announce`;
 
-    try {
-        const response = await axios.get(announceUrl, { params });
-        console.log(`Tracker response: ${response.data}`);
-        return true;
-    } catch (error) {
-        console.error(`Error contacting tracker: ${error}`);
-        return false;
-    }
+    axios
+        .get(announceUrl, {
+            params,
+            timeout: timeoutDuration,
+        })
+        .then(response => {
+            callback(
+                `${announceUrl} -> Received response: ${response.data}`,
+                null
+            );
+        })
+        .catch(error => {
+            let err: string;
+            if (
+                error.code === 'ECONNABORTED' &&
+                error.message.includes('timeout')
+            ) {
+                err = `${announceUrl} -> Reached timeout`;
+            } else {
+                err = `${announceUrl} -> Received error: ${error}`;
+            }
+            callback(null, err);
+        });
 }
 
 // Function to check UDP trackers
 function checkUdpTracker(
     trackerUrl: string,
-    msgString: string,
     timeoutDuration: number = 10000,
-    callback: (resp: any) => void
+    callback: (resp: string | null, err: string | null) => void
 ): void {
     const url = new URL(trackerUrl);
     const socket = dgram.createSocket('udp4');
@@ -46,42 +70,43 @@ function checkUdpTracker(
         ? trackerUrl
         : `${trackerUrl}/announce`;
 
-    const messageBuffer = Buffer.from(msgString, 'utf8');
+    const connectRequest = Buffer.alloc(16);
+    connectRequest.writeBigInt64BE(BigInt(TRACKER_MAGIC_CONSTANT), 0); // Connection ID
+    connectRequest.writeUInt32BE(ACTION_CONNECT, 8); // Action
+    connectRequest.writeUInt32BE(TRANSACTION_ID, 12); // Transaction ID
 
     console.log(`Pinging tracker: ${announceUrl}`);
 
     socket.send(
-        messageBuffer,
+        connectRequest,
         0,
-        messageBuffer.length,
+        connectRequest.length,
         parseInt(url.port),
         url.hostname,
         err => {
             if (err) {
-                console.error(`Socket send error: ${err}`);
+                console.log(`${announceUrl} -> Socket send error: ${err}`);
                 socket.close();
             }
         }
     );
 
     const timeout = setTimeout(() => {
-        console.log(`Reached timeout for ${announceUrl}`);
+        console.log(`${announceUrl} -> Reached timeout`);
         socket.close();
     }, timeoutDuration);
 
     socket.on('message', response => {
-        console.log(
-            `Received response from ${announceUrl}: ${response.toString(
-                'utf8'
-            )}`
+        callback(
+            `${announceUrl} -> Received response: ${response.toString('utf8')}`,
+            null
         );
-        callback(response);
         clearTimeout(timeout);
         socket.close();
     });
 
     socket.on('error', err => {
-        console.error(`Received error response from ${announceUrl}: ${err}`);
+        callback(null, `${announceUrl} -> Received error: ${err}`);
         clearTimeout(timeout);
         socket.close();
     });
@@ -90,16 +115,24 @@ function checkUdpTracker(
 export async function testTrackerUrls(trackerUrls: string[]) {
     const timeoutDuration = 10000; // 10 seconds in milliseconds
     const results: Results = {};
-    const msgString = 'ping';
 
     for (let trackerUrl of trackerUrls) {
         const trackerUrlParsed = new URL(trackerUrl);
-        if (trackerUrlParsed.protocol.includes('udp')) {
-            checkUdpTracker(trackerUrl, msgString, timeoutDuration, resp => {
+
+        const callback: Callback = (resp, err) => {
+            if (resp && err === null) {
+                console.log(resp);
                 results[trackerUrl] = resp;
-            });
+            } else if (resp === null && err) {
+                console.error(err);
+                results[trackerUrl] = err;
+            }
+        };
+
+        if (trackerUrlParsed.protocol.includes('udp')) {
+            // checkUdpTracker(trackerUrl, timeoutDuration, callback);
         } else if (trackerUrlParsed.protocol.includes('http')) {
-            // TODO: add http/s ping
+            await checkHttpTracker(trackerUrl, timeoutDuration, callback);
         }
     }
 
@@ -113,5 +146,18 @@ if (require.main === module) {
     const trackersList = JSON.parse(trackersFile);
 
     // run ping script
-    testTrackerUrls(trackersList).then(results => console.log(results));
+    testTrackerUrls(trackersList).then(results => {
+        const resultsJson = JSON.stringify(results, null, 4);
+
+        fs.writeFile('ping-results.json', resultsJson, 'utf8', function (err) {
+            if (err) {
+                console.log(
+                    'An error occured while writing JSON Object to File.'
+                );
+                return console.log(err);
+            }
+
+            console.log('JSON file has been saved.');
+        });
+    });
 }
