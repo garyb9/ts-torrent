@@ -7,16 +7,6 @@ import {
     TorrentMetadata,
 } from './types';
 
-function buildConnRew() {
-    const buf = Buffer.alloc(16);
-
-    buf.writeBigInt64BE(BigInt(TRACKER_MAGIC_CONSTANT), 0); // Connection ID
-    buf.writeUInt32BE(0, 8); // Action
-    buf.writeUInt32BE(Math.floor(Math.random() * 0xffffffff), 12); // Transaction ID
-
-    return buf;
-}
-
 export function getPeers(
     torrent: TorrentMetadata,
     callback: (peers: any) => void
@@ -69,8 +59,13 @@ function respType(resp: Buffer): string {
 }
 
 function buildConnReq(): Buffer {
-    // ...
-    return Buffer.alloc(0); // placeholder return, replace with your implementation
+    const buf = Buffer.alloc(16);
+
+    buf.writeBigInt64BE(BigInt(TRACKER_MAGIC_CONSTANT), 0); // Connection ID
+    buf.writeUInt32BE(0, 8); // Action
+    buf.writeUInt32BE(Math.floor(Math.random() * 0xffffffff), 12); // Transaction ID
+
+    return buf;
 }
 
 function parseConnResp(resp: Buffer): ConnectionResponse {
