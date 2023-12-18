@@ -1,3 +1,5 @@
+export const TRACKER_MAGIC_CONSTANT = 0x41727101980;
+
 export interface TorrentFile {
     // Define the structure of each file object here, if known.
     // For instance, if each file has 'name' and 'size', use:
@@ -24,7 +26,9 @@ export interface TorrentMetadata {
 }
 
 export interface ConnectionResponse {
-    connectionId(connectionId: any): unknown;
+    action: number;
+    transactionId: number;
+    connectionId: bigint;
 }
 
 export interface AnnounceResponse {

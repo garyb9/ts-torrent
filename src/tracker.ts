@@ -1,6 +1,21 @@
 import dgram from 'dgram';
 import { Buffer } from 'buffer';
-import { AnnounceResponse, ConnectionResponse, TorrentMetadata } from './types';
+import {
+    AnnounceResponse,
+    ConnectionResponse,
+    TRACKER_MAGIC_CONSTANT,
+    TorrentMetadata,
+} from './types';
+
+function buildConnRew() {
+    const buf = Buffer.alloc(16);
+
+    buf.writeBigInt64BE(BigInt(TRACKER_MAGIC_CONSTANT), 0); // Connection ID
+    buf.writeUInt32BE(0, 8); // Action
+    buf.writeUInt32BE(Math.floor(Math.random() * 0xffffffff), 12); // Transaction ID
+
+    return buf;
+}
 
 export function getPeers(
     torrent: TorrentMetadata,
@@ -59,8 +74,11 @@ function buildConnReq(): Buffer {
 }
 
 function parseConnResp(resp: Buffer): ConnectionResponse {
-    // ...
-    return {} as ConnectionResponse; // placeholder return, replace with your implementation
+    return {
+        action: resp.readUInt32BE(0),
+        transactionId: resp.readUInt32BE(4),
+        connectionId: resp.readBigUInt64BE(8),
+    } as ConnectionResponse; // placeholder return, replace with your implementation
 }
 
 function buildAnnounceReq(connId: any): Buffer {
