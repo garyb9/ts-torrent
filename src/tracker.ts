@@ -6,9 +6,11 @@ import {
     ConnectionResponse,
     TRACKER_MAGIC_CONSTANT,
     TorrentMetadata,
+    TrackerResponseType,
 } from './types';
 import { randomBytes } from 'crypto';
 import { group } from './utils';
+import { torrentInfoHash, torrentSize } from './torrent-parser';
 
 export function getPeers(
     torrent: TorrentMetadata,
@@ -65,9 +67,11 @@ function genId(): Buffer {
     return id;
 }
 
-function respType(resp: Buffer): string {
-    // ...
-    return ''; // placeholder return, replace with your implementation
+function respType(resp: Buffer): TrackerResponseType {
+    const action = resp.readUInt32BE(0);
+    if (action === 0) return 'connect';
+    if (action === 1) return 'announce';
+    else return null;
 }
 
 function buildConnReq(): Buffer {
@@ -120,10 +124,10 @@ function buildAnnounceReq(connId: any, torrent: TorrentMetadata): Buffer {
     connId.copy(buf, 0); // connectionId
     buf.writeUInt32BE(1, 8); // action
     randomBytes(4).copy(buf, 12); // transaction id
-    // randomBytes(20).copy(buf, 16); // info hash - FIXME:
+    torrentInfoHash(torrent).copy(buf, 16); // info hash
     genId().copy(buf, 36); // peerId
     Buffer.alloc(8).copy(buf, 56); // downloaded
-    // size(torrent).copy(buf, 64); // left - FIXME:
+    torrentSize(torrent).copy(buf, 64); // left
     Buffer.alloc(8).copy(buf, 72); // uploaded
     buf.writeUInt32BE(0, 80); // event
     buf.writeUInt32BE(0, 80); // ip address

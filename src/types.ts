@@ -43,6 +43,8 @@ export interface Results {
     [key: string]: string;
 }
 
+export type TrackerResponseType = 'connect' | 'announce' | null;
+
 // export type Callback = (resp: string | null, err: string | null) => void;
 
 export interface Callback {
