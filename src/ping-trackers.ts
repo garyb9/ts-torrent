@@ -4,13 +4,9 @@ import axios from 'axios';
 import dgram from 'dgram';
 import { Buffer } from 'buffer';
 import { URL } from 'url';
-import { Callback, Results } from './types';
+import { Callback, Results, TRACKER_MAGIC_CONSTANT } from './types';
 import { generateRandomString } from './utils';
 import { randomBytes } from 'crypto';
-
-const TRACKER_MAGIC_CONSTANT = 0x41727101980;
-const ACTION_CONNECT = 0;
-const TRANSACTION_ID = Math.floor(Math.random() * 0xffffffff);
 
 // Function to check HTTP/S trackers
 async function checkHttpTracker(
@@ -72,8 +68,8 @@ function checkUdpTracker(
 
     const connectRequest = Buffer.alloc(16);
     connectRequest.writeBigInt64BE(BigInt(TRACKER_MAGIC_CONSTANT), 0); // Connection ID
-    connectRequest.writeUInt32BE(ACTION_CONNECT, 8); // Action
-    connectRequest.writeUInt32BE(TRANSACTION_ID, 12); // Transaction ID
+    connectRequest.writeUInt32BE(0, 8); // Action
+    connectRequest.writeUInt32BE(Math.floor(Math.random() * 0xffffffff), 12); // Transaction ID
 
     console.log(`Pinging tracker: ${announceUrl}`);
 

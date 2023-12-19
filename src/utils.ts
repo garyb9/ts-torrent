@@ -28,3 +28,11 @@ export function generateRandomString(length: number): string {
     }
     return result;
 }
+
+export function group(iterable: Buffer, groupSize: number): any[] {
+    let groups = [];
+    for (let i = 0; i < iterable.length; i += groupSize) {
+        groups.push(iterable.subarray(i, i + groupSize));
+    }
+    return groups;
+}

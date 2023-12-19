@@ -32,7 +32,11 @@ export interface ConnectionResponse {
 }
 
 export interface AnnounceResponse {
-    peers: any; // Define the structure of peers
+    action: number;
+    transactionId: number;
+    leechers: number;
+    seeders: number;
+    peers: any[]; // Define the structure of peers
 }
 
 export interface Results {
@@ -44,4 +48,9 @@ export interface Results {
 export interface Callback {
     (resp: string, err: null): void;
     (resp: null, err: string): void;
+}
+
+export interface Address {
+    slice: (arg0: number, arg1: number) => any[];
+    readUInt16BE: (arg0: number) => any;
 }
