@@ -1,7 +1,6 @@
 import * as path from 'path';
 import { openTorrentFile } from './torrent-parser';
-import app from './server';
-import { getPeers } from './tracker';
+import download from './download';
 
 async function main() {
     const torrentPath: string = path.join(
@@ -10,14 +9,12 @@ async function main() {
     );
     const torrent = openTorrentFile(torrentPath);
 
-    getPeers(torrent, peers => {
-        console.log(`list of peers: ${peers}`);
-    });
+    download(torrent);
 
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
-        console.log(`Server is running at http://localhost:${PORT}/`);
-    });
+    // const PORT = process.env.PORT || 3000;
+    // app.listen(PORT, () => {
+    //     console.log(`Server is running at http://localhost:${PORT}/`);
+    // });
 }
 
 main()
