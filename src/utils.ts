@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto';
+
 export function convertBuffersToStrings(obj: any): any {
     if (Buffer.isBuffer(obj)) {
         // Convert Buffer to string
@@ -35,4 +37,10 @@ export function group(iterable: Buffer, groupSize: number): any[] {
         groups.push(iterable.subarray(i, i + groupSize));
     }
     return groups;
+}
+
+export function genId(): Buffer {
+    const id = randomBytes(20);
+    Buffer.from('-GT5669-').copy(id, 0);
+    return id;
 }

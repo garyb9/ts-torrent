@@ -56,3 +56,14 @@ export interface Address {
     slice: (arg0: number, arg1: number) => any[];
     readUInt16BE: (arg0: number) => any;
 }
+
+export type Payload = {
+    index: number;
+    begin: number;
+    length: number;
+    listen: number;
+    block: {
+        length: number;
+        copy: (buf: Buffer, offset: number) => void;
+    };
+};

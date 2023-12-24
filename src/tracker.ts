@@ -9,7 +9,7 @@ import {
     TrackerResponseType,
 } from './types';
 import { randomBytes } from 'crypto';
-import { group } from './utils';
+import { group, genId } from './utils';
 import { torrentInfoHash, torrentSize } from './torrent-parser';
 
 export function getPeers(
@@ -59,12 +59,6 @@ function udpSend(
         url.host,
         callback
     );
-}
-
-function genId(): Buffer {
-    const id = randomBytes(20);
-    Buffer.from('-GT5669-').copy(id, 0);
-    return id;
 }
 
 function respType(resp: Buffer): TrackerResponseType {
